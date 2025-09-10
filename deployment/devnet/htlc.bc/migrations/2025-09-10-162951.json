@@ -1,0 +1,12 @@
+{
+  "cell_recipes": [
+    {
+      "name": "htlc.bc",
+      "tx_hash": "0x51d3431c27805ca999a1cc3165b7bc6d83a52901a4a7fb1b93c091a59ed81da9",
+      "index": 0,
+      "occupied_capacity": 2916700000000,
+      "data_hash": "0x2e16cae434f0b4efda8e09421d97dbbc2413781504cd528d7cd97e0db3b88317"
+    }
+  ],
+  "dep_group_recipes": []
+}

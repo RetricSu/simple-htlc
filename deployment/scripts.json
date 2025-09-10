@@ -1,5 +1,21 @@
 {
-  "devnet": {},
+  "devnet": {
+    "htlc.bc": {
+      "codeHash": "0xd0e3c6d4d6ae093edb77a20b43929726367b64d6c7fe5c897b459b59570ceee6",
+      "hashType": "data1",
+      "cellDeps": [
+        {
+          "cellDep": {
+            "outPoint": {
+              "txHash": "0x30d3e3c0c3570d3dc30a6eb44e035124d5f65fe2e822fd2a9f85986fb5756e2c",
+              "index": 0
+            },
+            "depType": "code"
+          }
+        }
+      ]
+    }
+  },
   "testnet": {},
   "mainnet": {}
 }

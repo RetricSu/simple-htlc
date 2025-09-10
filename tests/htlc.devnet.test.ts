@@ -1,7 +1,8 @@
-import { hexFrom, ccc, hashTypeToBytes } from "@ckb-ccc/core";
+import { hexFrom, ccc, hashTypeToBytes, WitnessArgs } from "@ckb-ccc/core";
 import scripts from "../deployment/scripts.json";
 import systemScripts from "../deployment/system-scripts.json";
-import { buildClient, buildSigner } from "./helper";
+import { buildClient, buildSigner } from "./core/helper";
+import { HTLCIdCodec } from "./core/type";
 
 describe("htlc contract", () => {
   let client: ccc.Client;
@@ -13,9 +14,22 @@ describe("htlc contract", () => {
     signer = buildSigner(client);
   });
 
-  test("should execute successfully", async () => {
+  test("should Refund successfully", async () => {
     const ckbJsVmScript = systemScripts.devnet["ckb_js_vm"];
     const contractScript = scripts.devnet["htlc.bc"];
+
+    const singerAddressObj = await signer.getRecommendedAddressObj();
+    const singerLock = singerAddressObj.script;
+    const fromLockHash = singerLock.hash().slice(0, 42); // only get first 20 bytes
+
+    const since = (1n << 63n) | 2n; // 2 blocks, relative
+    const htlcId = {
+      from: fromLockHash,
+      to: "0x1234567890123456789012345678901234567890",
+      hash: "0x711a1f01ff6b8712af57df1acac90e3c093dbeeb",
+      since,
+    };
+    const args = HTLCIdCodec.encode(htlcId);
 
     const mainScript = {
       codeHash: ckbJsVmScript.script.codeHash,
@@ -24,22 +38,14 @@ describe("htlc contract", () => {
         "0x0000" +
           contractScript.codeHash.slice(2) +
           hexFrom(hashTypeToBytes(contractScript.hashType)).slice(2) +
-          "0000000000000000000000000000000000000000000000000000000000000000",
+          hexFrom(args).slice(2),
       ),
-    };
-
-    const signerLock = (await signer.getRecommendedAddressObj()).script;
-    const toLock = {
-      codeHash: signerLock.codeHash,
-      hashType: signerLock.hashType,
-      args: signerLock.args,
     };
 
     const tx = ccc.Transaction.from({
       outputs: [
         {
-          lock: toLock,
-          type: mainScript,
+          lock: mainScript,
         },
       ],
       cellDeps: [
@@ -52,5 +58,38 @@ describe("htlc contract", () => {
     await tx.completeFeeBy(signer, 1000);
     const txHash = await signer.sendTransaction(tx);
     console.log(`Transaction sent: ${txHash}`);
-  });
+
+    // second tx to refund the htlc cell
+    // wait 2 block to pass the since requirement
+    await client.waitTransaction(txHash, 2);
+
+    // construct the tx2
+    const witnessArgs = new WitnessArgs(hexFrom("0x"));
+    const tx2 = ccc.Transaction.from({
+      inputs: [
+        {
+          previousOutput: {
+            txHash: txHash,
+            index: 0,
+          },
+          since,
+        },
+      ],
+      outputs: [
+        {
+          capacity: tx.outputs[0].capacity,
+          lock: singerLock,
+        },
+      ],
+      cellDeps: [
+        ...ckbJsVmScript.script.cellDeps.map((c) => c.cellDep),
+        ...contractScript.cellDeps.map((c) => c.cellDep),
+      ],
+      witnesses: [hexFrom(witnessArgs.toBytes())],
+    });
+    await tx2.completeInputsByCapacity(signer);
+    await tx2.completeFeeBy(signer, 1000);
+    const txHash2 = await signer.sendTransaction(tx2);
+    console.log(`Transaction sent: ${txHash2}`);
+  }, 100000);
 });
