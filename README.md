@@ -1,6 +1,15 @@
 # simple-htlc
 
-A JavaScript project for developing smart contracts on the CKB blockchain.
+The simple-htlc is a lock script that implements a minimal Hashed-Timelock-Contract on Nervos CKB.
+
+It guards cells with two mutually-exclusive branches:
+
+1. **fund** – anyone who reveals the expected preimage can unlock the cell; the output destination must be the one declared when the cell was created.  
+2. **refund** – after the since-height/-epoch has passed, the original depositor can claw the funds back; again, only the pre-signed refund address is accepted. In order to that, you must includes a second input cell which use the same refund lock-script in the transaction for validation.
+
+Both paths enforce the same receiver-lock-hash that was set at deployment, guaranteeing that assets always land in the agreed-upon hands.
+
+> ⚠️ This is an educational prototype—do not use it in production or with real value.
 
 ## Overview
 
