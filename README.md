@@ -1,15 +1,30 @@
-# simple-htlc
+# Simple-HTLC
 
-The simple-htlc is a lock script that implements a minimal Hashed-Timelock-Contract on Nervos CKB.
+A smart contract demo built with [ckb-js-vm](https://github.com/nervosnetwork/ckb-js-vm) in TypeScript that demonstrates how to use a Hashed Timelock Contract (HTLC) to enable trustless, conditional payments on CKB.
 
-It guards cells with two mutually-exclusive branches:
+## What is HTLC?
 
-1. **fund** – anyone who reveals the expected preimage can unlock the cell; the output destination must be the one declared when the cell was created.  
-2. **refund** – after the since-height/-epoch has passed, the original depositor can claw the funds back; again, only the pre-signed refund address is accepted. In order to that, you must includes a second input cell which use the same refund lock-script in the transaction for validation.
+A **Hashed Timelock Contract (HTLC)** is a type of smart contract that enables trustless, conditional payments between two parties. It uses a cryptographic hash to ensure that funds can only be claimed if the recipient provides the correct preimage of the hash within a set time limit. If the preimage isn’t revealed before the deadline, the sender can safely refund their funds. 
 
-Both paths enforce the same receiver-lock-hash that was set at deployment, guaranteeing that assets always land in the agreed-upon hands.
+## Why it Matters
 
-> ⚠️ This is an educational prototype—do not use it in production or with real value.
+- **Atomic swaps:** Enable cross-chain token exchanges without needing a centralized exchange or trusted third party.
+- **Payment channels:** Power off-chain micropayment systems (like Lightning Network) by ensuring safe settlement on-chain.
+- **Escrow protection:** Guarantee that either the recipient gets paid if conditions are met, or the sender gets refunded if not.
+- **Trustless automation:** Remove the need for intermediaries by enforcing conditions (hash + timelock) directly on-chain.
+
+## How HTLC Works on CKB
+
+On CKB, this HTLC is enforced through a [Lock Script](https://docs.nervos.org/docs/tech-explanation/lock-script) that protects a [Cell](https://docs.nervos.org/docs/tech-explanation/cell) with two mutually-exclusive branches:
+
+- **Fund:**
+    - Anyone who reveals the correct preimage of the stored hash can unlock the Cell.
+    - The output must go to the recipient address specified when the Cell was created.
+- **Refund:**
+    - If the timelock has expired (using CKB’s `since` field in block height or epoch), the original depositor can reclaim the funds.
+    - The refund transaction must include another input Cell locked by the same refund Lock Script to validate the refund address.
+
+> ⚠️ This is an educational prototype—do not use it in production or with real assets.
 
 ## Overview
 
@@ -17,26 +32,36 @@ This project uses the CKB JavaScript VM (ckb-js-vm) to write smart contracts in 
 
 ## Project Structure
 
-```
-simple-htlc/
-├── contracts/           # Smart contract source code
-│   └── hello-world/
-│       └── src/
-│           └── index.typescript # Contract implementation
-├── tests/              # Contract tests
-│   └── hello-world.test.typescript
-├── scripts/            # Build and utility scripts
-│   ├── build-all.js
-│   ├── build-contract.js
-│   └── add-contract.js
-├── dist/               # Compiled output (generated)
-│   ├── hello-world.js  # Bundled JavaScript
-│   └── hello-world.bc  # Compiled bytecode
-├── package.json
-├── tsconfig.json       # TypeScript configuration
-├── tsconfig.base.json  # Base TypeScript settings
-├── jest.config.cjs     # Jest testing configuration
-└── README.md
+```bash
+simple-htlc
+├── contracts                  # Smart contract source code
+│   └── htlc                   # HTLC contract implementation
+│       └── src
+│           ├── index.ts       # Main entry point
+│           ├── type.ts        # Type definitions
+│           └── util.ts        # Utility functions
+├── deployment                 # Deployment configuration and scripts
+│   ├── README.md              # Deployment instructions
+│   ├── scripts.json           # Deployment script config
+│   └── system-scripts.json    # System-level script definitions
+├── scripts                    # Helper scripts for building and deploying
+│   ├── add-contract.js        # Register a new contract
+│   ├── build-all.js           # Build all contracts
+│   ├── build-contract.js      # Build a single contract
+│   └── deploy.js              # Deploy contracts
+├── tests                      # Test suite
+│   ├── core                   # Core testing utilities
+│   │   ├── helper.ts          # Helper functions
+│   │   ├── type.ts            # Type definitions
+│   │   └── util.ts            # Utility functions
+│   ├── htlc.devnet.test.ts    # Integration tests on devnet
+│   ├── htlc.mock.test.ts      # Mock-based tests
+│   └── htlc.unit.test.ts      # Unit tests
+├── jest.config.cjs            # Jest test runner configuration
+├── package.json               # Project metadata, dependencies, and scripts
+├── tsconfig.base.json         # Shared TypeScript config
+├── tsconfig.json              # Project-specific TypeScript config
+└── README.md                  # Project overview and documentation
 ```
 
 ## Getting Started
